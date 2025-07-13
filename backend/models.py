@@ -32,8 +32,8 @@ class ConversationState:
             "conversation_step": self.conversation_step,
             "missing_fields": self.missing_fields,
             "messages": self.messages,
-            "created_at": self.created_at,
-            "updated_at": self.updated_at
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None
         }
 
     @classmethod
@@ -49,8 +49,10 @@ class ConversationState:
         state.conversation_step = data.get("conversation_step", "greeting")
         state.messages = data.get("messages", [])
         state.missing_fields = data.get("missing_fields", [])
-        state.created_at = data.get("created_at", datetime.now())
-        state.updated_at = data.get("updated_at", datetime.now())
+        created_at_str = data.get("created_at")
+        state.created_at = datetime.fromisoformat(created_at_str) if created_at_str else datetime.now()
+        updated_at_str = data.get("updated_at")
+        state.updated_at = datetime.fromisoformat(updated_at_str) if updated_at_str else datetime.now()
         return state
 
     def add_message(self, role: str, content: str):

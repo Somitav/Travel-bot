@@ -49,6 +49,8 @@ You are an AI travel assistant. Extract the following fields from the user's mes
 - For dates, use YYYY-MM-DD format.
 """
 
+    ai_extraction_success = False
+
     try:
         response = client.chat.completions.create(
             model="deepseek-r1-distill-llama-70b",
@@ -85,10 +87,52 @@ You are an AI travel assistant. Extract the following fields from the user's mes
                 state.scope = clean_entity_value(data.get("region_preference"))
             if not state.theme:
                 state.theme = clean_entity_value(data.get("travel_type"))
+
+            ai_extraction_success = True
         else:
             logger.warning("No valid JSON found in model response.")
     except Exception as e:
-        logger.warning(f"Failed to extract entities: {e}")
+        logger.warning(f"Failed to extract entities using AI: {e}")
+
+    # Fallback: Simple rule-based extraction for common cases
+    if not ai_extraction_success:
+        logger.info("Using fallback entity extraction...")
+
+        # Simple destination extraction
+        if not state.destination:
+            # Common destinations
+            destinations = ["paris", "london", "tokyo", "new york", "rome", "barcelona", "amsterdam", "berlin", "madrid", "lisbon", "prague", "vienna", "budapest", "dubai", "singapore", "thailand", "bali", "maldives", "greece", "italy", "spain", "france", "germany", "japan", "india", "china", "australia", "canada", "usa", "uk", "mexico", "brazil", "argentina", "peru", "chile", "egypt", "morocco", "turkey", "russia", "norway", "sweden", "finland", "denmark", "iceland", "croatia", "montenegro", "serbia", "poland", "czech republic", "slovakia", "hungary", "romania", "bulgaria", "ukraine", "belarus", "estonia", "latvia", "lithuania"]
+
+            user_lower = user_input.lower()
+            for dest in destinations:
+                if dest in user_lower:
+                    state.destination = dest.title()
+                    break
+
+        # Simple duration extraction
+        if not state.trip_duration:
+            # Look for number + "day" patterns
+            duration_match = re.search(r'(\d+)\s*day', user_input.lower())
+            if duration_match:
+                state.trip_duration = int(duration_match.group(1))
+
+        # Simple theme extraction
+        if not state.theme:
+            themes = {
+                "romantic": ["romantic", "romance", "honeymoon", "couple", "anniversary"],
+                "adventure": ["adventure", "hiking", "trekking", "climbing", "extreme"],
+                "family": ["family", "kids", "children", "child"],
+                "business": ["business", "work", "conference", "meeting"],
+                "relaxation": ["relaxation", "spa", "wellness", "peaceful", "quiet"],
+                "cultural": ["cultural", "museum", "history", "art", "heritage"],
+                "food": ["food", "culinary", "restaurant", "dining", "cuisine"]
+            }
+
+            user_lower = user_input.lower()
+            for theme_type, keywords in themes.items():
+                if any(keyword in user_lower for keyword in keywords):
+                    state.theme = theme_type
+                    break
 
     logger.info(f"Extracted: {state.to_dict()}")
     return state
@@ -139,7 +183,7 @@ async def process_user_message(session_id: str, user_message: str) -> AsyncGener
 
     state.add_message("user", user_message)
 
-    # Handle greeting
+    # Handle greeting - only on first interaction
     if state.conversation_step == "greeting":
         if is_greeting(user_message):
             greeting_response = (
@@ -149,13 +193,13 @@ async def process_user_message(session_id: str, user_message: str) -> AsyncGener
                 "or 'I'm looking for a romantic getaway for 5 days'."
             )
             state.add_message("bot", greeting_response)
+            state.conversation_step = "gathering_info"  # Move to next step
             await save_conversation_state(state)
             yield f"data: {json.dumps({'type': 'message', 'content': greeting_response})}\n\n"
-            # Send stream termination event
             yield f"data: {json.dumps({'type': 'done'})}\n\n"
             return
         else:
-            # User didn't greet, but provided travel info directly
+            # User provided travel info directly without greeting
             state.conversation_step = "gathering_info"
             greeting_response = (
                 "Hello! I'm Travel Bot, your AI travel assistant. "
@@ -164,14 +208,17 @@ async def process_user_message(session_id: str, user_message: str) -> AsyncGener
             state.add_message("bot", greeting_response)
             await save_conversation_state(state)
             yield f"data: {json.dumps({'type': 'message', 'content': greeting_response})}\n\n"
+            # Continue processing below - don't return here
 
-            # Process the travel request
-            await asyncio.sleep(0.5)  # Small delay for better UX
-
-    # Extract entities from user message
-    if state.conversation_step == "gathering_info" or state.conversation_step == "greeting":
-        state.conversation_step = "gathering_info"
+    # Process travel information
+    if state.conversation_step == "gathering_info":
+        # Extract entities from user message
+        old_state = state.to_dict()  # Store old state for comparison
         extract_entities(user_message, state)
+
+        # Log what was extracted
+        logger.info(f"Before extraction: {old_state}")
+        logger.info(f"After extraction: {state.to_dict()}")
 
         # Check what information is still missing
         missing_fields = state.get_missing_fields()
@@ -180,14 +227,12 @@ async def process_user_message(session_id: str, user_message: str) -> AsyncGener
         if missing_fields:
             # Ask for missing information
             questions = get_missing_info_questions()
-
             next_question = questions.get(missing_fields[0])
             if next_question:
                 response = f"Great! I have some information about your trip. {next_question}"
                 state.add_message("bot", response)
                 await save_conversation_state(state)
                 yield f"data: {json.dumps({'type': 'message', 'content': response})}\n\n"
-                # Send stream termination event
                 yield f"data: {json.dumps({'type': 'done'})}\n\n"
                 return
 

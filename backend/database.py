@@ -1,7 +1,7 @@
 import logging
 import os
 import sys
-from typing import Optional
+from typing import Optional, Dict
 from datetime import datetime
 from motor.motor_asyncio import AsyncIOMotorClient
 
@@ -18,10 +18,21 @@ mongo_client: Optional[AsyncIOMotorClient] = None
 database = None
 conversations_collection = None
 
+# In-memory fallback storage
+in_memory_conversations: Dict[str, ConversationState] = {}
+use_in_memory = False
+
 
 async def init_database():
     """Initialize MongoDB connection and collections"""
-    global mongo_client, database, conversations_collection
+    global mongo_client, database, conversations_collection, use_in_memory
+
+    # If no MongoDB URL is provided, use in-memory storage
+    if not MONGODB_URL:
+        logger.warning("No MongoDB URL provided. Using in-memory storage for development.")
+        use_in_memory = True
+        return
+
     try:
         mongo_client = AsyncIOMotorClient(MONGODB_URL)
         database = mongo_client.get_database("travel-bot")
@@ -32,7 +43,8 @@ async def init_database():
         logger.info("Successfully connected to MongoDB")
     except Exception as e:
         logger.error(f"Failed to connect to MongoDB: {e}")
-        raise e
+        logger.warning("Falling back to in-memory storage for development.")
+        use_in_memory = True
 
 
 async def close_database():
@@ -44,8 +56,11 @@ async def close_database():
 
 
 async def get_conversation_state(session_id: str) -> Optional[ConversationState]:
-    """Retrieve conversation state from MongoDB"""
+    """Retrieve conversation state from storage"""
     try:
+        if use_in_memory:
+            return in_memory_conversations.get(session_id)
+
         if conversations_collection is None:
             logger.error("Database not initialized")
             return None
@@ -60,13 +75,18 @@ async def get_conversation_state(session_id: str) -> Optional[ConversationState]
 
 
 async def save_conversation_state(state: ConversationState):
-    """Save conversation state to MongoDB"""
+    """Save conversation state to storage"""
     try:
+        state.updated_at = datetime.now()
+
+        if use_in_memory:
+            in_memory_conversations[state.session_id] = state
+            return
+
         if conversations_collection is None:
             logger.error("Database not initialized")
             return
 
-        state.updated_at = datetime.now()
         await conversations_collection.replace_one(
             {"session_id": state.session_id},
             state.to_dict(),
@@ -77,8 +97,12 @@ async def save_conversation_state(state: ConversationState):
 
 
 async def delete_conversation_state(session_id: str):
-    """Delete conversation state from MongoDB"""
+    """Delete conversation state from storage"""
     try:
+        if use_in_memory:
+            in_memory_conversations.pop(session_id, None)
+            return
+
         if conversations_collection is None:
             logger.error("Database not initialized")
             return
@@ -89,8 +113,11 @@ async def delete_conversation_state(session_id: str):
 
 
 async def get_all_conversations():
-    """Get all conversations from MongoDB (for admin purposes)"""
+    """Get all conversations from storage (for admin purposes)"""
     try:
+        if use_in_memory:
+            return list(in_memory_conversations.values())
+
         if conversations_collection is None:
             logger.error("Database not initialized")
             return []

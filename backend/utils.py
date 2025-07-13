@@ -7,7 +7,13 @@ def is_greeting(text: str) -> bool:
     """Check if the text is a greeting message"""
     greetings = ["hello", "hi", "hey", "good morning", "good evening", "good afternoon", "greetings", "hi there", "hello there"]
     text = text.lower().strip()
-    return text in greetings or (len(text.split()) <= 3 and any(greet in text for greet in greetings))
+
+    # Check if it's a simple greeting (3 words or less and contains greeting words)
+    if len(text.split()) <= 3 and any(greet in text for greet in greetings):
+        return True
+
+    # Check if it's exactly a greeting phrase
+    return text in greetings
 
 
 def normalize_dates_in_text(text: str) -> str:
