@@ -1,10 +1,15 @@
 import logging
 import json
+import sys
+import os
 from datetime import datetime
 from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
+
+# Add current directory to Python path for local imports
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from database import init_database, close_database, get_conversation_state, delete_conversation_state
 from services import process_user_message

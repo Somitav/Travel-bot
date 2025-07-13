@@ -1,8 +1,13 @@
 import logging
 import os
+import sys
 from typing import Optional
 from datetime import datetime
 from motor.motor_asyncio import AsyncIOMotorClient
+
+# Add current directory to Python path for local imports
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 from models import ConversationState
 
 logger = logging.getLogger("TravelBot")

@@ -2,9 +2,14 @@ import logging
 import json
 import re
 import asyncio
+import sys
+import os
 from typing import AsyncGenerator
 from groq import Groq
 from dotenv import load_dotenv
+
+# Add current directory to Python path for local imports
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from models import ConversationState
 from database import get_conversation_state, save_conversation_state
@@ -146,6 +151,8 @@ async def process_user_message(session_id: str, user_message: str) -> AsyncGener
             state.add_message("bot", greeting_response)
             await save_conversation_state(state)
             yield f"data: {json.dumps({'type': 'message', 'content': greeting_response})}\n\n"
+            # Send stream termination event
+            yield f"data: {json.dumps({'type': 'done'})}\n\n"
             return
         else:
             # User didn't greet, but provided travel info directly
@@ -180,6 +187,8 @@ async def process_user_message(session_id: str, user_message: str) -> AsyncGener
                 state.add_message("bot", response)
                 await save_conversation_state(state)
                 yield f"data: {json.dumps({'type': 'message', 'content': response})}\n\n"
+                # Send stream termination event
+                yield f"data: {json.dumps({'type': 'done'})}\n\n"
                 return
 
         # All information collected, generate itinerary
@@ -240,3 +249,6 @@ async def process_user_message(session_id: str, user_message: str) -> AsyncGener
             state.add_message("bot", response)
             await save_conversation_state(state)
             yield f"data: {json.dumps({'type': 'message', 'content': response})}\n\n"
+
+    # Send final stream termination event
+    yield f"data: {json.dumps({'type': 'done'})}\n\n"
