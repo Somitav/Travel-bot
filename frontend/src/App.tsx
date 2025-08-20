@@ -1,4 +1,4 @@
-import React from 'react';
+
 import LeftSection from './components/LeftSection';
 import ChatInterface from './components/ChatInterface';
 import './App.css';
