@@ -17,7 +17,7 @@ const teamMembers: TeamMember[] = [
 		avatar: 'SG',
 		linkedin: 'linkedin.com/in/somitav-goswami-778113170',
 		email: 'somitavgoswami@gmail.com',
-		github: 'https://github.com/Somitav',
+		github: 'github.com/Somitav',
 	},
 	{
 		name: 'Ayush Rajput',
@@ -25,7 +25,7 @@ const teamMembers: TeamMember[] = [
 		avatar: 'AR',
 		linkedin: 'linkedin.com/in/ayush-rajput',
 		email: 'ayushrajput8021@gmail.com',
-		github: 'https://github.com/ayushrajput8021',
+		github: 'github.com/ayushrajput8021',
 	},
 ];
 
