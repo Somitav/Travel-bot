@@ -12,20 +12,20 @@ interface TeamMember {
 
 const teamMembers: TeamMember[] = [
 	{
-		name: 'Sarah Johnson',
+		name: 'Somitav Goswami',
 		role: 'AI Developer',
-		avatar: 'SJ',
-		linkedin: 'linkedin.com/in/sarahjohnson',
-		email: 'sarah@travelbot.com',
-		github: 'github.com/sarahjohnson',
+		avatar: 'SG',
+		linkedin: 'linkedin.com/in/somitav-goswami-778113170',
+		email: 'somitavgoswami@gmail.com',
+		github: 'https://github.com/Somitav',
 	},
 	{
-		name: 'Michael Chen',
+		name: 'Ayush Rajput',
 		role: 'Web Developer',
-		avatar: 'MC',
-		linkedin: 'linkedin.com/in/michaelchen',
-		email: 'michael@travelbot.com',
-		github: 'github.com/michaelchen',
+		avatar: 'AR',
+		linkedin: 'linkedin.com/in/ayush-rajput',
+		email: 'ayushrajput8021@gmail.com',
+		github: 'https://github.com/ayushrajput8021',
 	},
 ];
 

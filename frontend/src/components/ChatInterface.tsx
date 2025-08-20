@@ -20,7 +20,7 @@ interface ItineraryDay {
 	activities: string[];
 }
 
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = 'https://travel-api.somitav.site';
 
 const ChatInterface: React.FC = () => {
 	const [messages, setMessages] = useState<Message[]>([]);
